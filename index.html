@@ -4,77 +4,118 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Engineering Common Materials</title>
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-  <header>
+  <div class="container">
     <h1>Engineering Common Materials</h1>
-    <p>Inventory Management System</p>
-  </header>
 
-  <main>
-    <div class="container">
-      <div class="top-bar">
-        <input type="text" placeholder="Search materials by specification, name, or item number..." />
-        <button class="add-btn"><i class="fa fa-plus"></i> Add New Material</button>
-      </div>
+    <!-- Search -->
+    <input type="text" id="searchInput" placeholder="Search by Specification..." />
 
-      <table>
-        <thead>
-          <tr>
-            <th>ITEM #</th>
-            <th>MATERIAL NAME</th>
-            <th>SPECIFICATIONS</th>
-            <th class="center">IN STOCK</th>
-            <th class="center">OUT STOCK</th>
-            <th class="center">REMAINING</th>
-            <th class="center">ACTIONS</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>000010</td>
-            <td>Portland Cement</td>
-            <td>Type I/II, ASTM C150, 94lb bags</td>
-            <td class="green center">500</td>
-            <td class="red center">150</td>
-            <td class="blue center">350</td>
-            <td class="center actions">
-              <i class="fa fa-retweet"></i>
-              <i class="fa fa-pen"></i>
-              <i class="fa fa-trash"></i>
-            </td>
-          </tr>
-          <tr>
-            <td>000011</td>
-            <td>Structural Steel Beams</td>
-            <td>W8×31, ASTM A992, Grade 50, 20ft lengths</td>
-            <td class="green center">75</td>
-            <td class="red center">25</td>
-            <td class="blue center">50</td>
-            <td class="center actions">
-              <i class="fa fa-retweet"></i>
-              <i class="fa fa-pen"></i>
-              <i class="fa fa-trash"></i>
-            </td>
-          </tr>
-          <tr>
-            <td>000012</td>
-            <td>Rebar</td>
-            <td>#4 (1/2") Grade 60, ASTM A615, 20ft lengths, deformed</td>
-            <td class="green center">300</td>
-            <td class="red center">120</td>
-            <td class="blue center">180</td>
-            <td class="center actions">
-              <i class="fa fa-retweet"></i>
-              <i class="fa fa-pen"></i>
-              <i class="fa fa-trash"></i>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </main>
+    <!-- Add Material Form -->
+    <form id="addForm">
+      <h3>Add New Material</h3>
+      <input type="text" id="newSpec" placeholder="Specification" required />
+      <input type="number" id="newInStock" placeholder="In Stock" required />
+      <input type="number" id="newOutStock" placeholder="Out Stock" required />
+      <button type="submit">Add Material</button>
+    </form>
+
+    <!-- Table -->
+    <table id="materialsTable">
+      <thead>
+        <tr>
+          <th>Item Number</th>
+          <th>Specification</th>
+          <th>In Stock</th>
+          <th>Out Stock</th>
+          <th>Remaining</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr>
+          <td>000010</td>
+          <td>10mm Rebar</td>
+          <td><input type="number" value="100" class="inStock" /></td>
+          <td><input type="number" value="20" class="outStock" /></td>
+          <td class="remaining">80</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Export Button -->
+    <button id="exportBtn">Download Excel</button>
+  </div>
+
+  <script>
+    let currentItemNumber = 11; // next item number: 000011
+
+    // Update Remaining
+    function updateRemaining() {
+      const rows = document.querySelectorAll("#tableBody tr");
+      rows.forEach(row => {
+        const inStock = row.querySelector(".inStock")?.valueAsNumber || 0;
+        const outStock = row.querySelector(".outStock")?.valueAsNumber || 0;
+        const remainingCell = row.querySelector(".remaining");
+        remainingCell.textContent = inStock - outStock;
+      });
+    }
+
+    // Add input listeners to existing inputs
+    document.querySelectorAll(".inStock, .outStock").forEach(input => {
+      input.addEventListener("input", updateRemaining);
+    });
+
+    // Search Function
+    document.getElementById("searchInput").addEventListener("input", function () {
+      const filter = this.value.toLowerCase();
+      const rows = document.querySelectorAll("#tableBody tr");
+      rows.forEach(row => {
+        const spec = row.cells[1].textContent.toLowerCase();
+        row.style.display = spec.includes(filter) ? "" : "none";
+      });
+    });
+
+    // Add New Material
+    document.getElementById("addForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const spec = document.getElementById("newSpec").value;
+      const inStock = parseInt(document.getElementById("newInStock").value, 10);
+      const outStock = parseInt(document.getElementById("newOutStock").value, 10);
+      const itemNum = currentItemNumber.toString().padStart(6, "0");
+      currentItemNumber++;
+
+      const tbody = document.getElementById("tableBody");
+      const newRow = document.createElement("tr");
+      newRow.innerHTML = `
+        <td>${itemNum}</td>
+        <td>${spec}</td>
+        <td><input type="number" value="${inStock}" class="inStock" /></td>
+        <td><input type="number" value="${outStock}" class="outStock" /></td>
+        <td class="remaining">${inStock - outStock}</td>
+      `;
+      tbody.appendChild(newRow);
+
+      // Add event listener for newly created inputs
+      newRow.querySelectorAll(".inStock, .outStock").forEach(input => {
+        input.addEventListener("input", updateRemaining);
+      });
+
+      updateRemaining();
+      this.reset();
+    });
+
+    // Export to Excel
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const table = document.getElementById("materialsTable");
+      const wb = XLSX.utils.table_to_book(table, { sheet: "Materials" });
+      XLSX.writeFile(wb, "Engineering_Common_Materials.xlsx");
+    });
+
+    updateRemaining(); // Initial calculation
+  </script>
 </body>
 </html>
